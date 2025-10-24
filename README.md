@@ -40,7 +40,25 @@ cargo build
 cargo run
 ```
 
-This will run a simple demo of creating an account, card, and processing a transaction.
+This starts the API server on `http://127.0.0.1:3000`.
+
+### API Endpoints
+
+- `GET /health` - Health check
+- `POST /transactions/authorize` - Authorize a transaction
+- `POST /transactions/capture` - Capture an authorized transaction
+- `POST /transactions/settle` - Settle a captured transaction
+
+Example request for authorization:
+
+```json
+{
+  "card_id": "uuid-here",
+  "merchant_id": "uuid-here",
+  "amount": 100.0,
+  "currency": "EUR"
+}
+```
 
 ## Contributing
 

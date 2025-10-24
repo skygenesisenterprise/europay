@@ -1,63 +1,50 @@
-mod accounts;
-mod cards;
-mod transactions;
-mod messaging;
-mod merchants;
-mod security;
+mod config;
+mod middlewares;
+mod controllers;
+mod services;
+mod models;
+mod routes;
+mod utils;
+mod core;
+mod queries;
+mod tests;
+mod scripts;
 
-use accounts::Account;
-use cards::PaymentCard;
-use merchants::Merchant;
-use transactions::PaymentProcessor;
+use axum::Router;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tower_http::cors::CorsLayer;
+use tower_http::trace::TraceLayer;
+use tracing;
 
-fn main() {
-    println!("Europay - Open Source Payment System");
+use models::transactions::PaymentProcessor;
+use routes::transactions;
+use config::Config;
+use middlewares::logging_middleware;
 
-    // Example usage
-    let mut processor = PaymentProcessor::new();
+#[tokio::main]
+async fn main() {
+    // Initialize tracing
+    tracing_subscriber::fmt::init();
 
-    // Create account
-    let mut account = Account::new("John Doe".to_string(), "EUR".to_string());
-    account.credit(1000.0); // Add initial balance
-    let account_id = account.id;
-    processor.add_account(account);
+    // Load configuration
+    let config = Config::default();
 
-    // Create card
-    let card = PaymentCard::new(
-        account_id,
-        "4111111111111111".to_string(),
-        12,
-        2025,
-        "123".to_string(),
-        "John Doe".to_string(),
-    );
-    let card_id = card.id;
-    processor.add_card(card);
+    // Create shared state
+    let processor = Arc::new(Mutex::new(PaymentProcessor::new()));
 
-    // Create merchant
-    let merchant = Merchant::new(
-        "Example Store".to_string(),
-        "Retail".to_string(),
-        uuid::Uuid::new_v4(), // Dummy acquirer
-    );
-    let merchant_id = merchant.id;
-    processor.add_merchant(merchant);
+    // Build the application
+    let app = Router::new()
+        .route("/health", axum::routing::get(|| async { "OK" }))
+        .nest("/transactions", transactions::create_routes(processor.clone()))
+        .layer(axum::middleware::from_fn(logging_middleware))
+        .layer(TraceLayer::new_for_http())
+        .layer(CorsLayer::permissive());
 
-    // Authorize transaction
-    match processor.authorize_transaction(card_id, merchant_id, 100.0, "EUR") {
-        Ok(tx_id) => {
-            println!("Transaction authorized: {}", tx_id);
-
-            // Capture
-            if let Ok(()) = processor.capture_transaction(tx_id) {
-                println!("Transaction captured");
-
-                // Settle
-                if let Ok(()) = processor.settle_transaction(tx_id) {
-                    println!("Transaction settled");
-                }
-            }
-        }
-        Err(e) => println!("Authorization failed: {}", e),
-    }
+    // Run the server
+    let addr = SocketAddr::from((config.server.host.parse::<std::net::IpAddr>().unwrap(), config.server.port));
+    tracing::info!("Listening on {}", addr);
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }

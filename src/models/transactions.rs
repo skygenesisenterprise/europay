@@ -3,10 +3,10 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use crate::accounts::Account;
-use crate::cards::PaymentCard;
-use crate::merchants::Merchant;
-use crate::security::SecurityManager;
+use crate::models::accounts::Account;
+use crate::models::cards::PaymentCard;
+use crate::models::merchants::Merchant;
+use crate::services::security::SecurityManager;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,7 +91,7 @@ impl PaymentProcessor {
         let merchant = self.merchants.get(&merchant_id).ok_or("Merchant not found")?;
         let account = self.accounts.get(&card.account_id).ok_or("Account not found")?;
 
-        if card.status != crate::cards::CardStatus::Active {
+        if card.status != crate::models::cards::CardStatus::Active {
             return Err("Card not active".to_string());
         }
         if card.is_expired() {
