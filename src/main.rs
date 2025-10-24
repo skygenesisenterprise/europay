@@ -20,8 +20,10 @@ use tracing;
 
 use models::transactions::PaymentProcessor;
 use routes::transactions;
+use routes::settlement;
 use config::Config;
 use middlewares::logging_middleware;
+use services::settlement::SettlementService;
 
 #[tokio::main]
 async fn main() {
@@ -33,11 +35,14 @@ async fn main() {
 
     // Create shared state
     let processor = Arc::new(Mutex::new(PaymentProcessor::new()));
+    let settlement_service = Arc::new(Mutex::new(SettlementService::new()));
 
     // Build the application
     let app = Router::new()
         .route("/health", axum::routing::get(|| async { "OK" }))
         .nest("/transactions", transactions::create_routes(processor.clone()))
+        .nest("/network", routes::network::create_routes())
+        .nest("/settlement", settlement::create_routes(settlement_service.clone()))
         .layer(axum::middleware::from_fn(logging_middleware))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive());

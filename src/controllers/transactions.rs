@@ -7,13 +7,14 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::models::transactions::PaymentProcessor;
+use crate::core::currency::Currency;
 
 #[derive(Deserialize)]
 pub struct AuthorizeRequest {
     pub card_id: Uuid,
     pub merchant_id: Uuid,
     pub amount: f64,
-    pub currency: String,
+    pub currency: Currency,
 }
 
 #[derive(Serialize)]

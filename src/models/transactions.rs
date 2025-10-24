@@ -7,6 +7,7 @@ use crate::models::accounts::Account;
 use crate::models::cards::PaymentCard;
 use crate::models::merchants::Merchant;
 use crate::services::security::SecurityManager;
+use crate::core::currency::Currency;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,7 +16,7 @@ pub struct Transaction {
     pub card_id: Uuid,
     pub merchant_id: Uuid,
     pub amount: f64,
-    pub currency: String,
+    pub currency: Currency,
     pub status: TransactionStatus,
     pub transaction_type: TransactionType,
     pub created_at: DateTime<Utc>,
@@ -40,7 +41,7 @@ pub enum TransactionType {
 }
 
 impl Transaction {
-    pub fn new(card_id: Uuid, merchant_id: Uuid, amount: f64, currency: String, transaction_type: TransactionType) -> Self {
+    pub fn new(card_id: Uuid, merchant_id: Uuid, amount: f64, currency: Currency, transaction_type: TransactionType) -> Self {
         Self {
             id: Uuid::new_v4(),
             card_id,
@@ -86,7 +87,7 @@ impl PaymentProcessor {
         self.merchants.insert(merchant.id, merchant);
     }
 
-    pub fn authorize_transaction(&mut self, card_id: Uuid, merchant_id: Uuid, amount: f64, currency: &str) -> Result<Uuid, String> {
+    pub fn authorize_transaction(&mut self, card_id: Uuid, merchant_id: Uuid, amount: f64, currency: &Currency) -> Result<Uuid, String> {
         let card = self.cards.get(&card_id).ok_or("Card not found")?;
         let merchant = self.merchants.get(&merchant_id).ok_or("Merchant not found")?;
         let account = self.accounts.get(&card.account_id).ok_or("Account not found")?;
@@ -104,7 +105,7 @@ impl PaymentProcessor {
             return Err("Transaction flagged for fraud".to_string());
         }
 
-        let mut transaction = Transaction::new(card_id, merchant_id, amount, currency.to_string(), TransactionType::Purchase);
+        let mut transaction = Transaction::new(card_id, merchant_id, amount, currency.clone(), TransactionType::Purchase);
         transaction.status = TransactionStatus::Authorized;
         transaction.processed_at = Some(Utc::now());
 

@@ -3,13 +3,14 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use crate::core::currency::Currency;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     pub id: Uuid,
     pub holder_name: String,
     pub balance: f64,
-    pub currency: String,
+    pub currency: Currency,
     pub created_at: DateTime<Utc>,
     pub status: AccountStatus,
 }
@@ -22,7 +23,7 @@ pub enum AccountStatus {
 }
 
 impl Account {
-    pub fn new(holder_name: String, currency: String) -> Self {
+    pub fn new(holder_name: String, currency: Currency) -> Self {
         Self {
             id: Uuid::new_v4(),
             holder_name,
